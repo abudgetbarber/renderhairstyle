@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Budget Barber · AI Haircut Grid</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@300;400;500;600&family=Barlow+Condensed:wght@600;700&display=swap" rel="stylesheet"/>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --green:#0b3d2e; --green-mid:#1a5c42; --green-lt:#e8f2ed;
+  --yellow:#f5d800; --yellow-lt:#fdf9d6; --yellow-md:#f0c800;
+  --white:#ffffff; --off-white:#f7f6f2; --gray-lt:#efefeb;
+  --gray:#c8c5bc; --gray-dk:#7a776e; --ink:#1a1a14;
+  --radius:8px; --radius-lg:14px;
+  --shadow:0 2px 12px rgba(11,61,46,0.10);
+  --shadow-lg:0 6px 32px rgba(11,61,46,0.14);
+}
+html { font-size:16px; }
+body { font-family:'Barlow',sans-serif; background:var(--off-white); color:var(--ink); min-height:100vh; display:flex; flex-direction:column; }
+
+/* HEADER */
+header { background:var(--white); border-bottom:3px solid var(--yellow); padding:0 2rem; height:70px; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:100; box-shadow:0 2px 16px rgba(11,61,46,0.08); }
+.logo-wrap { display:flex; align-items:center; gap:14px; }
+.logo-block { background:var(--yellow); padding:5px 11px 4px; display:flex; flex-direction:column; gap:3px; border-radius:3px; }
+.logo-budget { font-family:'Bebas Neue',sans-serif; font-size:24px; color:var(--green); letter-spacing:0.04em; line-height:1; }
+.logo-barber-row { background:var(--green); padding:2px 6px; border-radius:2px; }
+.logo-barber { font-family:'Bebas Neue',sans-serif; font-size:14px; color:var(--yellow); letter-spacing:0.14em; line-height:1; }
+.logo-sub { font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:700; letter-spacing:0.16em; text-transform:uppercase; color:var(--green); margin-top:1px; }
+.logo-desc { font-size:12px; color:var(--gray-dk); font-weight:300; }
+.gemini-badge { font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:700; letter-spacing:0.10em; text-transform:uppercase; color:var(--green); background:var(--green-lt); border:1px solid #b8d8c8; border-radius:20px; padding:4px 12px; }
+
+/* LAYOUT */
+.page { display:grid; grid-template-columns:400px 1fr; flex:1; min-height:calc(100vh - 70px); }
+
+/* LEFT PANEL */
+.panel { background:var(--white); border-right:1px solid var(--gray-lt); padding:2rem 1.75rem; display:flex; flex-direction:column; gap:1.75rem; overflow-y:auto; }
+.section-label { font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:700; letter-spacing:0.14em; text-transform:uppercase; color:var(--green-mid); margin-bottom:8px; display:flex; align-items:center; gap:6px; }
+.section-label::before { content:''; display:inline-block; width:3px; height:12px; background:var(--yellow); border-radius:2px; }
+
+/* Gender pills */
+.pills { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.pill { padding:12px 14px; border:1.5px solid var(--gray); border-radius:var(--radius); cursor:pointer; background:var(--gray-lt); transition:all 0.15s; }
+.pill-title { font-family:'Barlow Condensed',sans-serif; font-size:16px; font-weight:700; color:var(--ink); margin-bottom:2px; }
+.pill-sub { font-size:11px; color:var(--gray-dk); }
+.pill:hover { border-color:var(--green); }
+.pill.active { background:var(--green); border-color:var(--green); }
+.pill.active .pill-title { color:var(--yellow); }
+.pill.active .pill-sub { color:#a8c8b8; }
+
+/* Upload */
+.upload-zone { border:2px dashed var(--gray); border-radius:var(--radius-lg); padding:2rem 1rem; text-align:center; cursor:pointer; position:relative; transition:all 0.18s; background:var(--gray-lt); }
+.upload-zone:hover { border-color:var(--green-mid); background:var(--green-lt); }
+.upload-zone input { position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%; }
+.upload-icon { width:48px; height:48px; margin:0 auto 12px; border-radius:50%; background:var(--white); border:1.5px solid var(--gray); display:flex; align-items:center; justify-content:center; }
+.upload-icon svg { width:22px; height:22px; stroke:var(--green-mid); fill:none; stroke-width:1.75; }
+.upload-zone h4 { font-size:15px; font-weight:600; color:var(--ink); margin-bottom:4px; }
+.upload-zone p { font-size:12px; color:var(--gray-dk); }
+
+/* Preview card */
+.preview-card { display:flex; align-items:center; gap:12px; background:var(--green-lt); border:1.5px solid #b8d8c8; border-radius:var(--radius-lg); padding:10px 12px; animation:fadeIn 0.2s ease; }
+@keyframes fadeIn { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:none} }
+.preview-card img { width:58px; height:58px; border-radius:var(--radius); object-fit:cover; flex-shrink:0; border:2px solid var(--white); }
+.preview-info { flex:1; min-width:0; }
+.preview-info p { font-size:13px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.preview-info span { font-size:11px; color:var(--green-mid); font-weight:500; }
+.rm-btn { background:none; border:none; cursor:pointer; width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:var(--gray-dk); font-size:20px; transition:background 0.15s; flex-shrink:0; }
+.rm-btn:hover { background:var(--gray-lt); color:var(--ink); }
+
+/* Accordion */
+.accordion { border:1px solid var(--gray); border-radius:var(--radius); overflow:hidden; }
+.accordion summary { padding:10px 14px; font-size:12px; font-weight:600; cursor:pointer; background:var(--gray-lt); color:var(--gray-dk); list-style:none; display:flex; align-items:center; justify-content:space-between; }
+.accordion summary::-webkit-details-marker { display:none; }
+.accordion summary::after { content:'↓'; font-size:11px; }
+details[open] .accordion summary::after { content:'↑'; }
+.accordion pre { padding:12px 14px; font-size:10.5px; line-height:1.65; color:var(--gray-dk); white-space:pre-wrap; background:var(--white); border-top:1px solid var(--gray-lt); max-height:200px; overflow-y:auto; font-family:'Courier New',monospace; }
+
+/* Generate button */
+.gen-btn { width:100%; height:52px; background:var(--yellow); color:var(--green); border:none; border-radius:var(--radius); font-family:'Bebas Neue',sans-serif; font-size:22px; letter-spacing:0.08em; cursor:pointer; transition:all 0.15s; display:flex; align-items:center; justify-content:center; gap:10px; box-shadow:0 3px 0 var(--yellow-md),var(--shadow); }
+.gen-btn:hover:not(:disabled) { transform:translateY(-1px); box-shadow:0 5px 0 var(--yellow-md),var(--shadow-lg); }
+.gen-btn:active:not(:disabled) { transform:translateY(1px); box-shadow:0 1px 0 var(--yellow-md); }
+.gen-btn:disabled { opacity:0.38; cursor:not-allowed; transform:none; box-shadow:none; }
+.gen-btn .spinner { width:18px; height:18px; border:2.5px solid rgba(11,61,46,0.2); border-top-color:var(--green); border-radius:50%; animation:spin 0.7s linear infinite; }
+@keyframes spin { to{transform:rotate(360deg)} }
+
+/* OUTPUT PANEL */
+.output { background:var(--off-white); display:flex; flex-direction:column; align-items:center; justify-content:center; padding:2.5rem; min-height:calc(100vh - 70px); }
+.empty-state { text-align:center; max-width:340px; }
+.empty-grid { width:110px; height:140px; margin:0 auto 1.5rem; display:grid; grid-template-columns:1fr 1fr 1fr; gap:5px; }
+.eg-cell { background:var(--white); border-radius:4px; border:1px solid var(--gray); }
+.eg-cell:nth-child(2) { background:var(--yellow-lt); }
+.eg-cell:nth-child(5) { background:var(--green-lt); }
+.empty-state h3 { font-family:'Bebas Neue',sans-serif; font-size:28px; letter-spacing:0.04em; color:var(--green); margin-bottom:6px; }
+.empty-state p { font-size:14px; color:var(--gray-dk); line-height:1.6; }
+
+/* Status bar */
+.status-bar { display:flex; align-items:flex-start; gap:10px; padding:14px 16px; border-radius:var(--radius); font-size:13px; line-height:1.5; width:100%; max-width:540px; margin-bottom:1.5rem; }
+.status-bar .spin2 { width:16px; height:16px; flex-shrink:0; margin-top:2px; border:2px solid currentColor; border-top-color:transparent; border-radius:50%; animation:spin 0.7s linear infinite; }
+.status-bar.info    { background:#e8f0fb; color:#1a4f8a; border:1px solid #b8d0f0; }
+.status-bar.error   { background:#fbeae8; color:#8b2a1e; border:1px solid #f0b8b0; }
+.status-bar.success { background:var(--green-lt); color:var(--green); border:1px solid #b8d8c8; font-weight:500; }
+
+/* Result */
+.result-wrap { width:100%; max-width:480px; animation:fadeIn 0.3s ease; }
+.result-label { font-family:'Barlow Condensed',sans-serif; font-size:12px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:var(--green-mid); margin-bottom:10px; text-align:center; }
+.result-img-box { border-radius:var(--radius-lg); overflow:hidden; border:2px solid var(--yellow); box-shadow:var(--shadow-lg); margin-bottom:12px; }
+.result-img-box img { width:100%; display:block; }
+.result-actions { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.btn-dl { height:44px; background:var(--green); color:var(--yellow); border:none; border-radius:var(--radius); font-family:'Barlow Condensed',sans-serif; font-size:14px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; cursor:pointer; transition:opacity 0.15s; }
+.btn-dl:hover { opacity:0.85; }
+.btn-retry { height:44px; background:var(--white); color:var(--green); border:1.5px solid var(--green); border-radius:var(--radius); font-family:'Barlow Condensed',sans-serif; font-size:14px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; cursor:pointer; transition:background 0.15s; }
+.btn-retry:hover { background:var(--green-lt); }
+
+::-webkit-scrollbar { width:5px; }
+::-webkit-scrollbar-thumb { background:var(--gray); border-radius:10px; }
+
+footer { background:var(--green); color:#7aaa90; text-align:center; padding:14px; font-size:12px; letter-spacing:0.04em; }
+footer strong { color:var(--yellow); }
+
+@media (max-width:800px) {
+  .page { grid-template-columns:1fr; }
+  .panel { border-right:none; border-bottom:1px solid var(--gray-lt); }
+  .output { min-height:auto; padding:2rem 1rem; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo-wrap">
+    <div class="logo-block">
+      <span class="logo-budget">BUDGET</span>
+      <div class="logo-barber-row"><span class="logo-barber">BARBER</span></div>
+    </div>
+    <div>
+      <div class="logo-sub">Digital Men's Salon</div>
+      <div class="logo-desc">AI Haircut Reference Generator</div>
+    </div>
+  </div>
+  <span class="gemini-badge">Gemini 2.0 Flash</span>
+</header>
+
+<div class="page">
+  <aside class="panel">
+
+    <!-- Step 1: Gender -->
+    <div>
+      <div class="section-label">Step 1 — Style Variant</div>
+      <div class="pills">
+        <div class="pill active" id="opt-male" onclick="setGender('male')">
+          <div class="pill-title">Male</div>
+          <div class="pill-sub">Fades · tapers · barbershop</div>
+        </div>
+        <div class="pill" id="opt-female" onclick="setGender('female')">
+          <div class="pill-title">Female</div>
+          <div class="pill-sub">Bobs · waves · braids</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 2: Upload -->
+    <div>
+      <div class="section-label">Step 2 — Upload Portrait</div>
+      <div class="upload-zone" id="uploadZone">
+        <input type="file" id="fileInput" accept="image/jpeg,image/png,image/webp" onchange="handleFile(event)"/>
+        <div class="upload-icon">
+          <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        </div>
+        <h4>Drop or click to upload</h4>
+        <p>Clear front-facing portrait · JPG / PNG / WebP · Max 10MB</p>
+      </div>
+      <div id="previewSection" style="display:none; margin-top:8px;"></div>
+    </div>
+
+    <!-- Prompt preview -->
+    <details id="promptAccordion" style="display:none;">
+      <div class="accordion">
+        <summary>View AI prompt being sent</summary>
+        <pre id="promptText"></pre>
+      </div>
+    </details>
+
+    <!-- Generate -->
+    <button class="gen-btn" id="genBtn" onclick="generate()" disabled>
+      <span id="genBtnLabel">Generate 9-Hairstyle Grid</span>
+    </button>
+
+  </aside>
+
+  <main class="output">
+    <div class="empty-state" id="emptyState">
+      <div class="empty-grid">
+        <div class="eg-cell"></div><div class="eg-cell"></div><div class="eg-cell"></div>
+        <div class="eg-cell"></div><div class="eg-cell"></div><div class="eg-cell"></div>
+        <div class="eg-cell"></div><div class="eg-cell"></div><div class="eg-cell"></div>
+      </div>
+      <h3>Your Barber Grid</h3>
+      <p>Choose a style variant, upload a clear portrait, and generate your 9-hairstyle barber reference.</p>
+    </div>
+    <div id="statusArea" style="display:none; width:100%; max-width:540px;"></div>
+    <div id="resultArea" style="display:none;"></div>
+  </main>
+</div>
+
+<footer>
+  <strong>Budget Barber</strong> · Digital Men's Salon · Powered by Google Gemini 2.0 Flash
+</footer>
+
+<script>
+  // ============================================================
+  //  CONFIGURATION — update this after deploying your Worker
+  //  Replace with your Cloudflare Worker URL
+  // ============================================================
+  const WORKER_URL = "https://hairstyle.abudgetbarber.workers.dev";
+  // ============================================================
+
+  const PROMPTS = {
+    male: `Use the uploaded image as a STRICT, NON-NEGOTIABLE identity reference.
+
+ABSOLUTE FACE LOCK (HIGHEST PRIORITY):
+- The face in the output MUST be pixel-identical to the uploaded image
+- SAME facial geometry, SAME skin texture, SAME pores, SAME moles, SAME asymmetry
+- SAME expression, SAME head tilt, SAME eye direction
+- NO beautification, NO symmetry correction, NO aging or de-aging
+- NO gender change, NO facial feature enhancement
+- NO lighting changes that alter facial appearance
+
+FIRST (INTERNAL STEP ONLY - DO NOT OUTPUT TEXT):
+Analyze the uploaded face to determine:
+- Face shape, Hair density, Hair texture and curl pattern
+- Natural growth direction and hairline
+
+SECOND (FINAL OUTPUT - IMAGE ONLY):
+Generate ONE single vertical 9:16, true-4K composite image containing a 3x3 grid.
+
+GRID RULES:
+- 9 UNIQUE hairstyles (no repeats)
+- Hairstyles applied realistically while preserving the EXACT SAME FACE
+- Hair is the ONLY editable region
+- Face, skin tone, shadows, proportions MUST remain unchanged in every tile
+
+STRICT CONSISTENCY REQUIREMENTS:
+- SAME pose, SAME camera angle, SAME focal length
+- SAME background, SAME lighting direction and intensity
+- SAME facial expression across all 9 tiles
+
+HAIRSTYLE VARIATION RULES:
+- Mix short, medium, and slightly longer hairstyles
+- Professional, college, and youthful styles implicitly represented
+- Respect real hair density, texture, and scalp visibility
+- Natural hairlines and realistic parting
+- NO wigs, NO fantasy volume, NO AI over-styling
+
+TECHNICAL REQUIREMENTS:
+- Vertical 9:16 layout, True 4K clarity
+- Photorealistic hair texture and shadows
+- Natural hair movement without distortion
+
+ABSOLUTE RESTRICTIONS:
+- OUTPUT IMAGE ONLY
+- NO text, captions, labels, or explanations
+- NO background changes
+- NO makeup or facial changes unless present in the original image
+
+GOAL: Create a barber-grade haircut reference grid where the uploaded face is IDENTICAL in all 9 tiles and ONLY the hairstyle changes.`,
+
+    female: `Use the uploaded image as a STRICT, NON-NEGOTIABLE identity reference.
+
+ABSOLUTE FACE LOCK (HIGHEST PRIORITY):
+- The face in the output MUST be pixel-identical to the uploaded image
+- SAME facial geometry, SAME skin texture, SAME pores, SAME moles, SAME asymmetry
+- SAME expression, SAME head tilt, SAME eye direction
+- NO beautification, NO symmetry correction, NO aging or de-aging
+- NO gender change, NO facial feature enhancement
+- NO lighting changes that alter facial appearance
+
+FIRST (INTERNAL STEP ONLY - DO NOT OUTPUT TEXT):
+Analyze the uploaded face to determine face shape, hair density, texture, and growth direction.
+
+SECOND (FINAL OUTPUT - IMAGE ONLY):
+Generate ONE single vertical 9:16, true-4K composite image containing a 3x3 grid.
+
+GRID RULES:
+- 9 UNIQUE hairstyles (no repeats)
+- Hairstyles applied realistically while preserving the EXACT SAME FACE
+- Hair is the ONLY editable region
+- Face, skin tone, shadows, proportions MUST remain unchanged in every tile
+
+STRICT CONSISTENCY REQUIREMENTS:
+- SAME pose, SAME camera angle, SAME focal length
+- SAME background, SAME lighting direction and intensity
+- SAME facial expression across all 9 tiles
+
+HAIRSTYLE VARIATION RULES (Female):
+- Mix pixie cut, bob, lob, shoulder-length layers, beach waves, straight blowout, updo, curtain bangs, braided styles
+- Salon-grade and youthful styles
+- Natural hairlines and realistic parting
+- NO wigs, NO fantasy volume, NO AI over-styling
+
+TECHNICAL REQUIREMENTS:
+- Vertical 9:16 layout, True 4K clarity
+- Photorealistic hair texture and shadows
+
+ABSOLUTE RESTRICTIONS:
+- OUTPUT IMAGE ONLY
+- NO text, captions, labels, or explanations
+- NO background changes
+
+GOAL: Create a salon-grade haircut reference grid where the uploaded face is IDENTICAL in all 9 tiles and ONLY the hairstyle changes.`
+  };
+
+  let gender = 'male';
+  let imageBase64 = null;
+  let imageMime = null;
+  let lastDataUrl = null;
+
+  function setGender(g) {
+    gender = g;
+    document.getElementById('opt-male').className  = 'pill' + (g === 'male'   ? ' active' : '');
+    document.getElementById('opt-female').className = 'pill' + (g === 'female' ? ' active' : '');
+    document.getElementById('promptText').textContent = PROMPTS[gender];
+  }
+
+  function handleFile(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) { alert('File too large — max 10MB.'); return; }
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const dataUrl = ev.target.result;
+      imageBase64 = dataUrl.split(',')[1];
+      imageMime   = file.type || 'image/jpeg';
+      document.getElementById('uploadZone').style.display = 'none';
+      const sec = document.getElementById('previewSection');
+      sec.style.display = 'block';
+      sec.innerHTML = `<div class="preview-card">
+        <img src="${dataUrl}" alt="preview"/>
+        <div class="preview-info">
+          <p>${file.name}</p>
+          <span>✓ Ready to generate</span>
+        </div>
+        <button class="rm-btn" onclick="removeImage()">×</button>
+      </div>`;
+      document.getElementById('promptText').textContent = PROMPTS[gender];
+      document.getElementById('promptAccordion').style.display = 'block';
+      checkReady();
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function removeImage() {
+    imageBase64 = null; imageMime = null;
+    document.getElementById('previewSection').style.display = 'none';
+    document.getElementById('uploadZone').style.display = 'block';
+    document.getElementById('fileInput').value = '';
+    document.getElementById('promptAccordion').style.display = 'none';
+    resetOutput(); checkReady();
+  }
+
+  function checkReady() {
+    document.getElementById('genBtn').disabled = !imageBase64;
+  }
+
+  function resetOutput() {
+    document.getElementById('emptyState').style.display = 'block';
+    document.getElementById('statusArea').style.display = 'none';
+    document.getElementById('resultArea').style.display  = 'none';
+  }
+
+  function showStatus(type, msg, spinner) {
+    document.getElementById('emptyState').style.display = 'none';
+    const sa = document.getElementById('statusArea');
+    sa.style.display = 'block';
+    sa.innerHTML = `<div class="status-bar ${type}">
+      ${spinner ? '<div class="spin2"></div>' : ''}
+      <span>${msg}</span>
+    </div>`;
+  }
+
+  async function generate() {
+    if (!imageBase64) return;
+
+    const btn   = document.getElementById('genBtn');
+    const label = document.getElementById('genBtnLabel');
+    btn.disabled = true;
+    label.innerHTML = '<div class="spinner"></div> Generating Grid...';
+    document.getElementById('resultArea').style.display = 'none';
+    showStatus('info', 'Sending portrait to Gemini — generating your 9-hairstyle grid. This takes 30–90 seconds…', true);
+
+    try {
+      const payload = {
+        contents: [{
+          parts: [
+            { text: PROMPTS[gender] },
+            { inline_data: { mime_type: imageMime, data: imageBase64 } }
+          ]
+        }],
+        generationConfig: { responseModalities: ['IMAGE', 'TEXT'], temperature: 1 }
+      };
+
+      const res = await fetch(WORKER_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ payload })   // No API key sent from browser
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error?.message || data?.error || 'Error ' + res.status);
+
+      const parts   = data?.candidates?.[0]?.content?.parts || [];
+      const imgPart = parts.find(p => p.inlineData?.mimeType?.startsWith('image/'));
+
+      if (!imgPart) {
+        const txt = parts.find(p => p.text);
+        throw new Error(txt?.text?.slice(0, 220) || 'No image returned. Try a clearer front-facing portrait.');
+      }
+
+      lastDataUrl = `data:${imgPart.inlineData.mimeType};base64,${imgPart.inlineData.data}`;
+      showStatus('success', '✓ 9-hairstyle grid generated! Download below or regenerate for a new set.', false);
+
+      const ra = document.getElementById('resultArea');
+      ra.style.display = 'block';
+      ra.innerHTML = `<div class="result-wrap">
+        <div class="result-label">Your Budget Barber Reference Grid</div>
+        <div class="result-img-box">
+          <img src="${lastDataUrl}" alt="9-hairstyle reference grid"/>
+        </div>
+        <div class="result-actions">
+          <button class="btn-dl"    onclick="downloadImg()">↓ Download Grid</button>
+          <button class="btn-retry" onclick="generate()">↻ Regenerate</button>
+        </div>
+      </div>`;
+
+    } catch (err) {
+      showStatus('error', '⚠ ' + err.message, false);
+    } finally {
+      btn.disabled = false;
+      label.textContent = 'Generate 9-Hairstyle Grid';
+      checkReady();
+    }
+  }
+
+  function downloadImg() {
+    if (!lastDataUrl) return;
+    const a = document.createElement('a');
+    a.href = lastDataUrl;
+    a.download = 'budget-barber-haircut-grid.png';
+    a.click();
+  }
+</script>
+</body>
+</html>
